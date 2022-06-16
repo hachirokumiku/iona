@@ -1,13 +1,16 @@
+//iona-8639 by hachirokumiku, branched from iona by Takashi Toyoshima
+//add analog support
+//slight adjustments for personal preference
 // Copyright 2018 Takashi Toyoshima <toyoshim@gmail.com>. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 // Define one of following USE_*.
-//#define USE_NANO
-#define USE_MEGA
+#define USE_PROMICRO
+//#define USE_MEGA
 
-#if defined(USE_NANO)
-# include "jvsio/clients/NanoClient.h"
+#if defined(USE_PROMICRO)
+# include "jvsio/clients/ProMicroClient.h"
 #elif defined(USE_MEGA)
 # include "jvsio/clients/MegaClient.h"
 #else
@@ -15,16 +18,16 @@
 #endif
 #include "jvsio/JVSIO.cpp"
 
-#if defined(USE_NANO)
-NanoDataClient data;
-NanoSenseClient sense;
-NanoLedClient led;
+#if defined(USE_PROMICRO)
+ProMicroDataClient data;
+ProMicroSenseClient sense;
+ProMicroLedClient led;
 
 const int pins[] = {
   12, A3,
   A2,  4,  5,  6,  7,  8,  9, 10, 11, A1, A0,
 };
-#endif  // defined(USE_NANO)
+#endif  // defined(USE_PROMICRO)
 
 #if defined(USE_MEGA)
 MegaDataClient data;
@@ -43,9 +46,9 @@ JVSIO io(&data, &sense, &led);
 
 // Some NAOMI games expects the first segment starts with "SEGA ENTERPRISES,LTD.".
 // E.g. one major official I/O board is "SEGA ENTERPRISES,LTD.;I/O 838-13683B;Ver1.07;99/16".
-static const char io_id[] = "SEGA ENTERPRISES,LTD.compat;IONA-NANO;ver1.01;Normal Mode";
-static const char suchipai_id[] = "SEGA ENTERPRISES,LTD.compat;IONA-NANO;Ver1.01;Su Chi Pai Mode";
-static const char virtualon_id[] = "SEGA ENTERPRISES,LTD.compat;IONA-NANO;Ver1.01;Virtual-On Mode";
+static const char io_id[] = "SEGA ENTERPRISES,LTD.compat;IONA-8639;ver1.01;Normal Mode";
+static const char suchipai_id[] = "SEGA ENTERPRISES,LTD.compat;IONA-8639;Ver1.01;Su Chi Pai Mode";
+static const char virtualon_id[] = "SEGA ENTERPRISES,LTD.compat;IONA-8639;Ver1.01;Virtual-On Mode";
 uint8_t ios[5] = { 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t coinCount = 0;
 uint8_t mode = 0;
@@ -160,11 +163,22 @@ void setup() {
 }
 
 void loop() {
+//analog[0] = DEVICE.GETANALOG(LeftHatY) << 10;
+//analog[1] = DEVICE.GETANALOG(LeftHatX)<< 10;
+//analog[2] = DEVICE.GETANALOG(Example) << 10;
+//analog[3] = DEVICE.GETANALOG(Example) << 10;
+//analog[4] = DEVICE.GETANALOG(Example)<< 10;
+//analog[5] = DEVICE.GETANALOG(Example) << 10;
+//analog[6] = DEVICE.GETANALOG(Example) << 10;
+//analog[7] = DEVICE.GETANALOG(Example)<< 10;
+//analog[8] = DEVICE.GETANALOG(Example) << 10;
   uint8_t len;
   uint8_t* data = io.getNextCommand(&len);
   if (!data) {
     updateMode();
-
+     uint16_t analog[8] = {
+    0x8000, 0x8000, 0x8000, 0x8000, 0x8000, 0x8000, 0x8000, 0x8000
+  }; //Set Up 8 Analogs
     // Update IO pins.
     // Common SW: TEST TILT1 TILT2 TILT3 UND UND UND UND
     ios[0] = in( 0, 7);
@@ -250,9 +264,9 @@ void loop() {
    case JVSIO::kCmdAnalogInput:
     io.pushReport(JVSIO::kReportOk);
     for (size_t channel = 0; channel < data[1]; ++channel) {
-      io.pushReport(0x80);
-      io.pushReport(0x00);
-    }
+      io.pushReport(analog[channel] >> 8);
+      io.pushReport(analog[channel] & 0xff);
+  }
     break;
    case JVSIO::kCmdCoinSub:
     coinCount -= data[3];
